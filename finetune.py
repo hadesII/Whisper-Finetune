@@ -140,7 +140,7 @@ training_args = Seq2SeqTrainingArguments(output_dir=args.output_dir,
                                          remove_unused_columns=False,
                                          label_names=["labels"])
 
-if (args.use_lora or args.use_adalora) && (training_args.local_rank == 0 or training_args.local_rank == -1):
+if (args.use_lora or args.use_adalora) and (training_args.local_rank == 0 or training_args.local_rank == -1):
     print('=' * 90)
     model.print_trainable_parameters()
     print('=' * 90)
