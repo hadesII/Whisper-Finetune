@@ -27,7 +27,9 @@ add_arg("learning_rate", type=float,  default=1e-3, help="学习率大小")
 add_arg("min_audio_len", type=float,  default=0.5,  help="最小的音频长度，单位秒")
 add_arg("max_audio_len", type=float,  default=30,   help="最大的音频长度，单位秒")
 add_arg("use_adalora",   type=bool,   default=True, help="是否使用AdaLora而不是Lora")
+add_arg("use_lora",   type=bool,   default=True, help="是否使用Lora")
 add_arg("fp16",          type=bool,   default=True, help="是否使用fp16训练模型")
+add_arg("only_decoder",          type=bool,   default=True, help="是否使用fp16训练模型")
 add_arg("use_8bit",      type=bool,   default=True, help="是否将模型量化为8位")
 add_arg("local_files_only", type=bool, default=False, help="是否只在本地加载模型，不尝试下载")
 add_arg("num_train_epochs", type=int, default=3,    help="训练的轮数")
@@ -99,13 +101,21 @@ if args.use_adalora:
     config = AdaLoraConfig(init_r=12, target_r=4, beta1=0.85, beta2=0.85, tinit=200, tfinal=1000, deltaT=10,
                            lora_alpha=32, lora_dropout=0.1, orth_reg_weight=0.5,
                            target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"])
-else:
+elif args.use_lora:
     config = LoraConfig(r=32, lora_alpha=64, target_modules=["q_proj", "v_proj"], lora_dropout=0.05, bias="none")
-model = get_peft_model(model, config)
+else:
+    config = None
+
+
+if config:
+    model = get_peft_model(model, config)
 # 恢复训练时加载Lora参数
 if args.resume_from_checkpoint:
     adapters_dict = torch.load(f'{args.resume_from_checkpoint}/pytorch_model.bin')
     set_peft_model_state_dict(model=model, peft_model_state_dict=adapters_dict)
+
+if args.only_decoder:
+    model.freeze_encoder()
 
 # 定义训练参数
 training_args = Seq2SeqTrainingArguments(output_dir=args.output_dir,
